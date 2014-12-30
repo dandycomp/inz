@@ -59,8 +59,8 @@ int FastCC::getP(Point p1, Point p2)
 		{
 		Point p1_ = Point(p1.x + i, p1.y + j);
 		Point p2_ = Point(p2.x + i, p2.y + j);
-
 		sum += m_gl1.m_img.at<uchar>(p1_) * m_gl2.m_img.at<uchar>(p2_);
+		//cout << "in " << p1_ << " and " << p2_ << m_gl1.m_img.at<uchar>(p1_) * m_gl2.m_img.at<uchar>(p2_) << endl;
 		}
 	return sum;
 }

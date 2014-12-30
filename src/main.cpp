@@ -7,18 +7,10 @@
 #include "brut_corr.hpp"
 #include "gl_mat.hpp"
 
-
-
-
 //#include "fast_cc.hpp"
 #include "recursiveFastCC.h"
-
-#if 0
-#include <string>
-#include <fstream>
-#include <cstring>
 #include "cuda_code.cuh"
-#endif
+#include "cuda_interface.cuh"
 
 //#include "cuda_thrust.cuh"
 using namespace std;
@@ -28,18 +20,30 @@ using namespace cv;
 int main()
 {
 	
-	Mat img1 = imread("img/img1.jpg");
-	Mat img2 = imread("img/img2.jpg");
+	Mat img1 = imread("img/col.jpg");
+	Mat img2 = imread("img/col1.jpg");
+	//Mat img1 = imread("img/tiff/trxy_s2_00.tif");
+	//Mat img2 = imread("img/tiff/trxy_s2_01.tif");
+
+#if 0
+	if (!img1.data)
+	{
+		img1 = imread("../../img/col.jpg");
+		img2 = imread("../../img/col1.jpg");
+	}
+#endif
 
 	cvtColor(img1, img1, CV_RGB2GRAY);
 	cvtColor(img2, img2, CV_RGB2GRAY);
 
+
+
 	int patch = 7;
 	int subImg = 15;
 	
-	//CUDAGlobalPmat cudaP;
-	//cudaP.setParameters(img1, img2, subImg, patch);
-	//cudaP.run();
+	CUDAGlobalPmat cudaP;
+	cudaP.setParameters(img1, img2, subImg, patch);
+	cudaP.run();
 
 	BrutCorr brCorr;
 	brCorr.setParameters(img1, img2, subImg, patch);
@@ -53,6 +57,12 @@ int main()
     gl2.createGlSums();
 
 
+	CudaInterface cuda_interf;
+	//cuda_interf.setParameters(gl1, gl2);
+	cuda_interf.setParameters(gl1, gl2);
+	cuda_interf.run();
+
+
     FastCC fcc;
     fcc.setParameters(gl1, gl2);
 	//fcc.runFastCC();
@@ -63,5 +73,5 @@ int main()
 	//cin.get();
 
 	cout << "*****END*******" << endl;
-	return 1;
+	return 0;
 }

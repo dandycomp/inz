@@ -39,5 +39,4 @@ public:
 	int m_cols;
 	int m_subImg;//size of sub image
     int m_patch;// size of patch
-
 };

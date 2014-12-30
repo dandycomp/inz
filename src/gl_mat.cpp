@@ -78,8 +78,6 @@ void GlSumTbl::setParameters(Mat& img ,int subImg, int patch)
     m_patch = patch;
 }
 
-
-
 //get sum of pixels values around pn in patch area
 int GlSumTbl::getSumFromIntegral(Mat &sumIntgrl, Point pnt)
 {
