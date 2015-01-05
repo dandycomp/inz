@@ -6,10 +6,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+
 static const int PATCH_SIZE = 7;// rozwiazac ten problem za posrednictwem parametrow wejsciowych
 static const int SUB_IMG = 15;
 static const int IMAGE_WIDTH = 133;
 static const int IMAGE_HEIGHT = 98;
+
 
 __global__ void cudaGetBestCorrelateFromArea(int* p_values, int* glsum1,
 						int* glsum2, int* glSqSum1, int* glSqSum2,
