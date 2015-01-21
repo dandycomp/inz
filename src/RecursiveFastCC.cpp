@@ -218,10 +218,11 @@ float FastCC::getRecursiveBestCorrFromArea(Point pnt, Pmat pmat)
 	return bestCorrelation;
 }
 
-
 void FastCC::runFastCC()
 {
 	create_F_and_G_mat();
+	//cout << " In recursieve in [24,23] and [21,21] corr = " << getCorrelate(Point(24,23), Point(21,21)) << endl;
+#if 1
 	int newNrOfRows = m_gl1.m_img.rows - m_subImg + 1;
 	int newNrOfCols = m_gl1.m_img.cols - m_subImg + 1;
 
@@ -252,6 +253,7 @@ void FastCC::runFastCC()
 	//imwrite("img/FastCorrelation.jpg", outp);
 	imwrite("img/FastCorrelation.jpg", corrMat);
 	cout << " End of fast" << endl;
+#endif
 }
 
 void FastCC::recursiveFastCC()
@@ -295,11 +297,9 @@ void FastCC::recursiveFastCC()
 	Mat outp;
 	applyColorMap(corrMat, outp, COLORMAP_OCEAN);
 	imwrite("img/FastRecursiveCorrelation.jpg", outp);
-	//imwrite("img/FastRecursiveCorrelation.jpg", corrMat);
 	imshow("image", corrMat);
 	cvWaitKey(0);
 
-	//float tt = getDist(Point(10,10), Point(12, 16));
 	cout << " End of fast recursive " << endl;
 }
 
@@ -384,7 +384,8 @@ void FastCC::recursiveFastCCStructure()
 	int newNrOfCols = m_gl1.m_img.cols - m_subImg + 1;
 	
 	vector< OutpStr> cols;
-	vector<vector <OutpStr>> outpVec;
+	//vector<vector <OutpStr>> outpVec;
+
 
 	int finishedPercent = 0;
 	for (int j = 0; j < newNrOfRows; j++)

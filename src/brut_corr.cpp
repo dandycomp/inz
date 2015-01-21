@@ -7,7 +7,7 @@
 
 #include "brut_corr.hpp"
 
-void BrutCorr::setZero()
+void NCC::setZero()
 {
 	m_img1 =  Mat::zeros(1,1,CV_8U);
 	m_img2 =  Mat::zeros(1,1,CV_8U);
@@ -16,7 +16,7 @@ void BrutCorr::setZero()
 	m_corrImg = Mat::zeros(1,1,CV_8U);
 }
 
-void BrutCorr::setParameters(Mat& img1, Mat& img2,
+void NCC::setParameters(Mat& img1, Mat& img2,
 			size_t subImg, size_t patch)
 {
 	if(!img1.data || !img2.data ||
@@ -62,7 +62,7 @@ void BrutCorr::setParameters(Mat& img1, Mat& img2,
 }
 
 //return medium float value 0...255
-float BrutCorr::getMediumValueAroundPoint(Mat& img, Point pn)
+float NCC::getMediumValueAroundPoint(Mat& img, Point pn)
 {
 	int dist = (m_patch-1) / 2;
 	if( ( pn.x > img.cols-dist) ||
@@ -93,7 +93,7 @@ float BrutCorr::getMediumValueAroundPoint(Mat& img, Point pn)
 }
 
 
-float BrutCorr::getStDeviationValueAroundPoint(Mat& img, Point pn, float mediumValue)
+float NCC::getStDeviationValueAroundPoint(Mat& img, Point pn, float mediumValue)
 {
 	int dist = (m_patch-1) / 2;
 	if( ( pn.x > img.cols-dist) ||
@@ -124,13 +124,13 @@ float BrutCorr::getStDeviationValueAroundPoint(Mat& img, Point pn, float mediumV
 	return deviation;
 }
 
-float BrutCorr::getStDeviationValueAroundPoint(Mat& img, Point pn)
+float NCC::getStDeviationValueAroundPoint(Mat& img, Point pn)
 {
 	float medValue = getMediumValueAroundPoint(img, pn);
 	return getStDeviationValueAroundPoint(img, pn, medValue);
 }
 
-float BrutCorr::getCorrelate(Point p1, Point p2)
+float NCC::getCorrelate(Point p1, Point p2)
 {
 	int dist = (m_patch-1) / 2;
 	int maxX = max(p1.x, p2.x);
@@ -179,7 +179,7 @@ float BrutCorr::getCorrelate(Point p1, Point p2)
 	return numerator/denominator;
 }
 
-float BrutCorr::getBestCorrFromArea(Point pnt)
+float NCC::getBestCorrFromArea(Point pnt)
 {
 	int dist = (m_subImg-1) / 2;
 	if( ( pnt.x > m_img1.cols-dist) ||
@@ -213,7 +213,7 @@ float BrutCorr::getBestCorrFromArea(Point pnt)
 	return bestCorrelation;
 }
 
-void BrutCorr::correlate()
+void NCC::correlate()
 {
 	//float Bestcorr = getBestCorrFromArea(Point(100,100));
 	//float corr = getCorrelate(Point(453,353), Point(453,353));

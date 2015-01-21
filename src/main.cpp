@@ -6,6 +6,7 @@
 
 #include "brut_corr.hpp"
 #include "gl_mat.hpp"
+#include "parameters.h"
 
 //#include "fast_cc.hpp"
 #include "recursiveFastCC.h"
@@ -16,57 +17,52 @@
 using namespace std;
 using namespace cv;
 
+
 //gpu::meanStdDev
 int main()
 {
-	
-	Mat img1 = imread("img/col.jpg");
-	Mat img2 = imread("img/col1.jpg");
-	//Mat img1 = imread("img/tiff/trxy_s2_00.tif");
-	//Mat img2 = imread("img/tiff/trxy_s2_01.tif");
+	Mat img1 = imread(image1name);
+	Mat img2 = imread(image2name);
 
-#if 0
+	resize(img1, img1, Size(), RESIZE_COEFF, RESIZE_COEFF, INTER_CUBIC);
+	resize(img2, img2, Size(), RESIZE_COEFF, RESIZE_COEFF, INTER_CUBIC);
+
+	//imwrite("img/outp.tif", img1);
+
 	if (!img1.data)
 	{
-		img1 = imread("../../img/col.jpg");
-		img2 = imread("../../img/col1.jpg");
+		img1 = imread("../../" + image1name);
+		img2 = imread("../../" + image2name);
 	}
-#endif
 
 	cvtColor(img1, img1, CV_RGB2GRAY);
 	cvtColor(img2, img2, CV_RGB2GRAY);
 
+	//CUDAGlobalPmat cudaP;
+	//cudaP.setParameters(img1, img2, SUB_IMG, PATCH_SIZE);
+	//cudaP.run();
 
-
-	int patch = 7;
-	int subImg = 15;
-	
-	CUDAGlobalPmat cudaP;
-	cudaP.setParameters(img1, img2, subImg, patch);
-	cudaP.run();
-
-	BrutCorr brCorr;
-	brCorr.setParameters(img1, img2, subImg, patch);
-	//brCorr.correlate();
+	//NCC ncCorr;
+	//ncCorr.setParameters(img1, img2, subImg, patch);
+	//ncCorr.correlate();
 
     GlSumTbl gl1, gl2;
-    gl1.setParameters(img1, subImg, patch);
+	gl1.setParameters(img1, SUB_IMG, PATCH_SIZE);
     gl1.createGlSums();
 
-    gl2.setParameters(img2, subImg, patch);
+	gl2.setParameters(img2, SUB_IMG, PATCH_SIZE);
     gl2.createGlSums();
 
-
 	CudaInterface cuda_interf;
-	//cuda_interf.setParameters(gl1, gl2);
 	cuda_interf.setParameters(gl1, gl2);
-	cuda_interf.run();
-
+	//cuda_interf.run();
+	cuda_interf.fastCudaCorrelation();
+	//cuda_interf.deviceInfo();
 
     FastCC fcc;
     fcc.setParameters(gl1, gl2);
 	//fcc.runFastCC();
-    //fcc.recursiveFastCC();
+    fcc.recursiveFastCC();
 	//fcc.recursiveFastCCStructure();
 
 	//cout << " Press any key" << endl;

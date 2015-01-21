@@ -59,9 +59,10 @@ int Pmat::getPFromMat(int i, int j)
 }
 //do poprawki
 
+// funkcja wyznacza macierz Pmat dla nastepnego X-a na obrazie 
+//referencyjnym
 int  Pmat::next_P_x(int col, int row, Mat& img1, Mat& img2)
 {
-
 int sizeOfMat = m_subImg - m_patch + 1;
 int oldPVal = m_Pmat.at<float>(row,col);
 int I = 0;
@@ -150,7 +151,6 @@ Pmat Pmat::next_x_Pmat(Mat& img1, Mat& img2)
 //do poprawki
 Pmat Pmat::next_y_Pmat(Mat& img1, Mat& img2)
 {
-
     if(m_pnt.y >= img1.rows)
     {
         cout << " Out of range.nextYfun" << endl;

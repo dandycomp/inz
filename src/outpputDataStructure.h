@@ -5,8 +5,7 @@
 #include "outpputDataStructure.h"
 
 using namespace cv;
-class OutpStr{
-public:
+struct OutpStr{
 	Point m_point1;
 	Point m_point2;
 	float m_CCcoeff;

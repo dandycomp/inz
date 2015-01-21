@@ -26,7 +26,6 @@ private:
     void createGlobalSum(Mat& sumInt, Mat& sqSumInt);
     int getSumFromIntegral(Mat&, Point);
     void toIntegral(Mat& outpSum, Mat& outpSqSum);
-
     void setZero();
 
 

@@ -13,7 +13,6 @@
 using namespace std;
 using namespace cv;
 
-
 class FastCC{
 
 public:
@@ -50,7 +49,7 @@ private:
 	Pmat m_pVal;
 	Pmat m_nextXpVal;
 	Pmat m_nextYpVal;
-
+	vector<vector <OutpStr>> outpVec;
 };
 
 #endif // FAST_CC_HPP_INCLUDED

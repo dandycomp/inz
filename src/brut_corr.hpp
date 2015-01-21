@@ -23,10 +23,10 @@ using namespace cv;
 //W wersji ostatecznej mozna robic
 //wszystkie sprawdzenia na poczatku za jednym razem
 //Operating on float type. Final Mat image of type CV_32F
-class BrutCorr{
+class NCC{
 
 public:
-	BrutCorr(){}//setZero();}
+	NCC(){}//setZero();}
 	void setParameters(Mat&, Mat&,size_t subImg, size_t patch);
 	void correlate();
 
