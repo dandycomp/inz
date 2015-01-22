@@ -62,7 +62,7 @@ int main()
     FastCC fcc;
     fcc.setParameters(gl1, gl2);
 	//fcc.runFastCC();
-    fcc.recursiveFastCC();
+    //fcc.recursiveFastCC();
 	//fcc.recursiveFastCCStructure();
 
 	//cout << " Press any key" << endl;
