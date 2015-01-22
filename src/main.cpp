@@ -13,7 +13,6 @@
 #include "cuda_code.cuh"
 #include "cuda_interface.cuh"
 
-//#include "cuda_thrust.cuh"
 using namespace std;
 using namespace cv;
 
