@@ -3,7 +3,7 @@
 
 #include "opencv2\core\core.hpp"
 #include "outpputDataStructure.h"
-
+using namespace std;
 using namespace cv;
 struct OutpStr{
 	Point m_point1;

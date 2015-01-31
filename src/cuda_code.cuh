@@ -9,6 +9,7 @@
 #include "thrust\version.h"
 #include "opencv2/gpu/gpu.hpp"
 
+
 #include <iostream>
 using namespace std;
 using namespace cv;

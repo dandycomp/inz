@@ -5,10 +5,12 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include <iostream>
+#include <ctime>
 
 #include "gl_mat.hpp"
 #include "p_mat.hpp"
 #include "outpputDataStructure.h"
+#include "visualize.h"
 
 using namespace std;
 using namespace cv;

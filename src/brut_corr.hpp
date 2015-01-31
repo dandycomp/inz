@@ -15,7 +15,9 @@
 #include "opencv2\contrib\contrib.hpp"
 
 #include <iostream>
-
+#include "outpputDataStructure.h"
+#include "visualize.h"
+#include <ctime>
 using namespace std;
 using namespace cv;
 
@@ -36,7 +38,7 @@ private:
 	float getStDeviationValueAroundPoint(Mat&, Point);
 	float getStDeviationValueAroundPoint(Mat&, Point, float mediumValue);
 	float getCorrelate(Point p1, Point p2);
-	float getBestCorrFromArea(Point);
+	OutpStr getBestCorrFromArea(Point);
 
 private:
 	Mat m_img1;

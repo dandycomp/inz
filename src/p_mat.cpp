@@ -103,7 +103,6 @@ int  Pmat::next_P_y(int col, int row, Mat& img1, Mat& img2)
     Point p_nextYSecond = Point(p_nextYFirst.x+col-sizeOfMat/2,
                                 p_nextYFirst.y+row-sizeOfMat/2);
 
-//cout << "Points: " << p_nextYFirst << " " << p_nextYSecond << endl;
 //Counting of I argument. Equation (26)
 for(int i = -m_patch/2; i <= m_patch/2; i++)
     {

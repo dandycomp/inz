@@ -1,13 +1,5 @@
 ﻿#include "cuda_interface.cuh"
 
-#include <iostream>
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctime>
-#include <cuda_profiler_api.h>
-
-#include "cublas.h"
-
 using namespace cv;
 using namespace std;
 
@@ -15,77 +7,31 @@ using namespace std;
 CudaInterface::CudaInterface(){
 	m_img1_dev = NULL;
 	m_img2_dev = NULL;
-
-	m_glSum1_dev = NULL;
-	m_glSum2_dev = NULL;
-
-	m_glSqSum1_dev = NULL;
-	m_glSqSum2_dev = NULL;
 }
 
 CudaInterface::~CudaInterface(){
-
-	free(m_img1_host);
-	free(m_img2_host);
-
 	cudaFree(m_img1_dev);
 	cudaFree(m_img2_dev);
-
-	cudaFree(m_glSum1_dev);
-	cudaFree(m_glSum2_dev);
-
-	cudaFree(m_glSqSum1_dev);
-	cudaFree(m_glSqSum2_dev);
 }
 
 void CudaInterface::setParameters(
-	GlSumTbl& glimg1,
-	GlSumTbl& glimg2){
+	Mat& img1, Mat& img2){
 
-	m_imgWidth = glimg1.m_img.cols;//nie potrzebne
-	m_imgHeight = glimg1.m_img.rows;//nie potrzebne
+	int img_width = img1.cols;
+	int img_height = img1.rows;
 
-	m_glWidth = glimg1.m_glSum.cols;//nie potrzebne
-	m_glHeight = glimg1.m_glSum.rows;//nie potrzebne
-
-	m_patch = glimg1.m_patch;//nie potrzebne
-	m_subImg = glimg1.m_subImg;//nie potrzebne
-
-	size_t numImageBytes = m_imgWidth* m_imgHeight * sizeof(int);
-	size_t numGlSumBytes = m_glWidth *  m_glHeight * sizeof(int);
-
-	m_img1_host = (int*)malloc(numImageBytes);
-	m_img2_host = (int*)malloc(numImageBytes);
-
-	m_glSum1_host = (int*)malloc(numGlSumBytes);
-	int* m_glSum2_host = (int*)malloc(numGlSumBytes);
-
-	m_glSqSum1_host = (int*)malloc(numGlSumBytes);
-	int * m_glSqSum2_host = (int*)malloc(numGlSumBytes);
+	int* img1_host = new int[img_height* img_width];
+	int* img2_host = new int[img_height* img_width];
 
 	//filling arrays of image data
-	for (int i = 0; i < m_imgHeight; i++)
-		for (int j = 0; j < m_imgWidth; j++)
+	for (int i = 0; i < img_height; i++)
+		for (int j = 0; j < img_width; j++)
 		{
-		int index = i*m_imgWidth + j;
-		int tempPixelValue1 = glimg1.m_img.at<uchar>(i, j);
-		int tempPixelValue2 = glimg2.m_img.at<uchar>(i, j);
-		m_img1_host[index] = tempPixelValue1;
-		m_img2_host[index] = tempPixelValue2;
-		}
-
-	//filling array of global sums and global squared sums
-	for (int i = 0; i < m_glHeight; i++)
-		for (int j = 0; j < m_glWidth; j++)
-		{
-		int index = i*m_glWidth + j;
-
-		m_glSum1_host[index] = glimg1.m_glSum.at<float>(i, j);
-		m_glSum2_host[index] = glimg2.m_glSum.at<float>(i, j);
-
-		m_glSqSum1_host[index] = glimg1.m_glSqSum.at<float>(i, j);
-		m_glSqSum2_host[index] = glimg2.m_glSqSum.at<float>(i, j);
-
+		int index = i*img_width + j;
+		int tempPixelValue1 = img1.at<uchar>(i, j);
+		int tempPixelValue2 = img2.at<uchar>(i, j);
+		img1_host[index] = tempPixelValue1;
+		img2_host[index] = tempPixelValue2;
 		}
 
 	cudaError_t cudaStatus;
@@ -95,455 +41,41 @@ void CudaInterface::setParameters(
 		this->~CudaInterface();
 	}
 
+	size_t numImageBytes = img_height* img_width * sizeof(int);
 	//memory allocation on device
 	cudaMalloc((void**)&m_img1_dev, numImageBytes);
 	cudaMalloc((void**)&m_img2_dev, numImageBytes);
 
-	cudaMalloc((void**)&m_glSum1_dev, numGlSumBytes);
-	cudaMalloc((void**)&m_glSum2_dev, numGlSumBytes);
-
-	cudaMalloc((void**)&m_glSqSum1_dev, numGlSumBytes);
-	cudaMalloc((void**)&m_glSqSum2_dev, numGlSumBytes);
 
 	//copying data to device memory
-	cudaMemcpy(m_img1_dev, m_img1_host, numImageBytes, cudaMemcpyHostToDevice);
-	cudaMemcpy(m_img2_dev, m_img2_host, numImageBytes, cudaMemcpyHostToDevice);
-
-	cudaMemcpy(m_glSum1_dev, m_glSum1_host, numGlSumBytes, cudaMemcpyHostToDevice);
-	cudaMemcpy(m_glSum2_dev, m_glSum2_host, numGlSumBytes, cudaMemcpyHostToDevice);
-
-	cudaMemcpy(m_glSqSum1_dev, m_glSqSum1_host, numGlSumBytes, cudaMemcpyHostToDevice);
-	cudaMemcpy(m_glSqSum2_dev, m_glSqSum2_host, numGlSumBytes, cudaMemcpyHostToDevice);
-
-	//free(m_glSum1_host);
-	free(m_glSum2_host);
-	//free(m_glSqSum1_host);
-	free(m_glSqSum2_host);
-
-}
-
-
-void CudaInterface::array2Mat(float* arr){
-	//zakladamy tylko poprawny rozmiar orazu
-	int glWidth = IMAGE_WIDTH - PATCH_SIZE + 1;
-	int glHeight = IMAGE_HEIGHT - PATCH_SIZE + 1;
-	cv::Mat outpImg = cv::Mat::zeros(glHeight, glWidth, CV_8U);
-	for (int i = 0; i < glHeight; i++)
-		for (int j = 0; j < glWidth; j++)
-		{
-		int index = i*glWidth + j;
-		float corr = arr[index];
-		corr = 255 * (corr + 1.0) / 2.0;
-		outpImg.at<uchar>(i, j) = (int)corr;
-		}
-	cv::imwrite("cudaOutp.jpg", outpImg);
-}
-
-
-void CudaInterface::array2Mat_v2(float* arr){
-	//zakladamy tylko poprawny rozmiar orazu
-	int glWidth = IMAGE_WIDTH - SUB_IMG + 1;
-	int glHeight = IMAGE_HEIGHT - SUB_IMG + 1;
-	cv::Mat outpImg = cv::Mat::zeros(glHeight, glWidth, CV_8U);
-	for (int i = 0; i < glHeight; i++)
-		for (int j = 0; j < glWidth; j++)
-		{
-		int index = i*glWidth + j;
-		float corr = arr[index];
-		corr = 255 * (corr + 1.0) / 2.0;
-		outpImg.at<uchar>(i, j) = (int)corr;
-		}
-	cv::imwrite("cudaOutp.jpg", outpImg);
-}
-
-
-void CudaInterface::run(){
-	time_t start, stop;
-	double czas;
-	start = clock();
-	this->nccCorrelation();
-	//float c1 = simpleGetBestCorrFromArea(31, 30);
-	stop = clock();
-	czas = (stop - start);// / (double)1000;
-	//cout << "Czas NCC cuda = " << czas << endl;;
-
-	start = clock();
-	//this->fastRecursiveCorrelation();
-
-	stop = clock();
-	czas = (stop - start);// / (double)1000;
-	//cout << "Czas fast recursive cuda = " << czas << endl;
-}
-
-void CudaInterface::correlate(bool fast)
-{
-
-cudaError start = cudaProfilerStart();
-
-int glWidth = IMAGE_WIDTH - PATCH_SIZE + 1;
-int glHeight = IMAGE_HEIGHT - PATCH_SIZE + 1;
-float* corrMat = new float[glWidth*glHeight];
-
-int finishedPercent = 0;
-
-for (int col = 0; col < glWidth; col++)
-	for (int row = 0; row < glHeight; row++)
-	{
-	int index = row*glWidth + col;
-
-	if (fast)
-		//corrMat[index] = getBestCorrFromArea_fast(col + PATCH_SIZE / 2, row + PATCH_SIZE / 2);
-		//corrMat[index] = simpleGetBestCorrFromArea_v2(col + PATCH_SIZE / 2, row + PATCH_SIZE / 2);
-		corrMat[index] = simpleGetBestCorrFromArea_v3(col + PATCH_SIZE / 2, row + PATCH_SIZE / 2);
-	else
-		corrMat[index] = simpleGetBestCorrFromArea(col + PATCH_SIZE / 2, row + PATCH_SIZE / 2);
-
-	//corrMat[index] = getBestCorrFromArea(col + PATCH_SIZE / 2, row + PATCH_SIZE / 2);
-
-
-	int actual = (col*glHeight + row) * 100
-		/ (glWidth * glHeight);
-
-	if (actual > finishedPercent)
-	{
-		finishedPercent = actual;
-		cout << finishedPercent << " % " << endl;
-	}
-	}
-
-//cout << " Normal . Value of glMat[10,10] = " << corrMat[10 + 10 * glWidth] << endl;
-
-cudaError stop = cudaProfilerStop();
-array2Mat(corrMat);
-}
-
-float CudaInterface::getBestCorrFromArea_fast(int x, int y){
-
-	// counting parameters of central patch of first image to simplfy and 
-	// optimize algorithm. We need:
-	//patch*patch array of pixel intensity values
-	//medium value of this pixels
-	//standart deviation of this patch
-
-	int* im1_patch = new int[PATCH_SIZE*PATCH_SIZE];
-	for (int row = 0; row < PATCH_SIZE; row++)
-		for (int col = 0; col < PATCH_SIZE; col++)
-		{
-		int x_ = x - PATCH_SIZE / 2 + col;
-		int y_ = y - PATCH_SIZE / 2 + row;
-
-		int index = y_ * IMAGE_WIDTH + x_;
-		int temp = m_img1_host[index];
-		im1_patch[row * PATCH_SIZE + col] = temp;
-		}
-
-	int glImageWidth = IMAGE_WIDTH - PATCH_SIZE + 1;
-	int index = x - PATCH_SIZE / 2 + (y - PATCH_SIZE / 2) * glImageWidth;
-	int im1_patch_glSum = m_glSum1_host[index];
-	int im1_patch_glSqSum = m_glSqSum1_host[index];
-
-	dim3 threads(SUB_IMG, SUB_IMG);
-	dim3 blocks(1, 1);
-
-	int* im1_patch_device = NULL;
-	cudaMalloc((void**)&im1_patch_device, PATCH_SIZE*PATCH_SIZE*sizeof(int));
-	cudaMemcpy(im1_patch_device, im1_patch, PATCH_SIZE*PATCH_SIZE*sizeof(int), cudaMemcpyHostToDevice);
-
-	int area_side = SUB_IMG - PATCH_SIZE + 1;
-	float* dev_corr = NULL;
-	cudaMalloc((void**)&dev_corr, area_side*area_side*sizeof(float));
-
-	cudaGetBestCorrelate_fast << <blocks, threads >> >(m_img2_dev, m_glSum2_dev, m_glSqSum2_dev,
-		im1_patch_device, x, y,
-		im1_patch_glSum, im1_patch_glSqSum, dev_corr);
-
-	float* host_corr =  new float [area_side*area_side];
-	cudaMemcpy(host_corr, dev_corr, area_side*area_side*sizeof(float), cudaMemcpyDeviceToHost);
-
-	float max_corr = -1;
-	for(int i = 0; i < area_side*area_side; i++)
-	{
-		max_corr = host_corr[i] > max_corr? host_corr[i] : max_corr;
-		//cout << " Corr = " << host_corr[i] << endl;
-	}
-	//cout << " Max correlation = " << max_corr << endl;
-	return max_corr;
-}
-
-
-float CudaInterface::getBestCorrFromArea(int x, int y){
-
-	int area_side = SUB_IMG - PATCH_SIZE + 1; // one side of results area matrix
-	int area_size = area_side*area_side;// size of area
-
-	dim3 threads(PATCH_SIZE, PATCH_SIZE);
-	dim3 blocks(area_side, area_side);
-
-	int *host_P_output = new int[area_size];// size of area around pixel
-	for (int i = 0; i < area_size; i++)
-		host_P_output[i] = 0.0;
-
-	int *dev_P_output;
-	cudaMalloc((void**)&dev_P_output, area_size*sizeof(int));
-	cudaMemcpy(dev_P_output, host_P_output, area_size*sizeof(int), cudaMemcpyHostToDevice);
-
-	cudaGetAll_P_FromArea << <blocks, threads >> >(m_img1_dev, m_img2_dev,
-		x, y, dev_P_output);
-
-	cudaDeviceSynchronize();
-
-	//cudaMemcpy(host_P_output, dev_P_output, area_size*sizeof(int), cudaMemcpyDeviceToHost);
-	//for (int i = 0; i < area_size; i++)
-	//	cout << " p = " << host_P_output[i] << endl;
-
-	//cin.get();
-
-
-
-	float *host_output = new float[area_size];// size of area around pixel
-	for (int i = 0; i < area_size; i++)
-		host_output[i] = 0.0;
-
-	float *dev_outp;
-	cudaMalloc((void**)&dev_outp, area_size*sizeof(float));
-	cudaMemcpy(dev_outp, host_output, area_size*sizeof(float), cudaMemcpyHostToDevice);
-
-
-	dim3 threads_2(area_side, area_side);
-	cudaGetBestCorrelateFromArea << < 1, threads_2 >> >(dev_P_output, m_glSum1_dev,
-		m_glSum2_dev, m_glSqSum1_dev, m_glSqSum2_dev,
-		x, y, dev_outp);
-
-	cudaDeviceSynchronize();
-	cudaMemcpy(host_output, dev_outp, area_size*sizeof(float), cudaMemcpyDeviceToHost);
-
-	float max_cc = -1;
-	for (int i = 0; i < area_size; i++){
-		//cout << " host_output[i] = " << host_output[i] << endl;
-		max_cc = host_output[i] > max_cc ? host_output[i] : max_cc;
-	}
-
-	cudaFree(dev_P_output);
-	cudaFree(dev_outp);
-	return max_cc;
-}
-
-float CudaInterface::simpleGetBestCorrFromArea(int x, int y){
-	
-	// counting parameters of central patch of first image to simplfy and 
-	// optimize algorithm. We need:
-	//patch*patch array of pixel intensity values
-	//medium value of this pixels
-	//standart deviation of this patch
-
-	//zawiera wartości pikseli patcha z obrazu referencyjnego
-	int* im1_patch = new int[PATCH_SIZE*PATCH_SIZE];
-	int sum = 0;
-
-	//wypelnianmy danymi  im1_patch, oraz przy okazji liczymy sume tych elementow dla innych parametrow
-	for (int row = 0; row < PATCH_SIZE; row++)
-		for (int col = 0; col < PATCH_SIZE; col++)
-		{
-		int x_ = x - PATCH_SIZE / 2 + col;
-		int y_ = y - PATCH_SIZE / 2 + row;
-
-		int index = y_ * IMAGE_WIDTH + x_;
-		int temp = m_img1_host[index];
-		im1_patch[row * PATCH_SIZE + col] = temp;
-		sum += temp;
-		}
-
-	// wartosc srednia dla naszego patcha
-	int medium1 = (float)sum / ((float)PATCH_SIZE*(float)PATCH_SIZE);
-
-	//odchylenie standartowe
-	float stDev1 = 0;
-	for (int i = 0; i < PATCH_SIZE*PATCH_SIZE; i++)
-		stDev1 += pow((float)im1_patch[i] - medium1,2);
-
-	int area_side = SUB_IMG - PATCH_SIZE + 1; // one side of results area matrix
-
-	int* im1_patch_device = NULL;
-	cudaMalloc((void**)&im1_patch_device, PATCH_SIZE*PATCH_SIZE*sizeof(int));
-	cudaMemcpy(im1_patch_device, im1_patch, PATCH_SIZE*PATCH_SIZE*sizeof(int), cudaMemcpyHostToDevice);
-
-	float* dev_corr = NULL;
-	cudaMalloc((void**)&dev_corr, area_side*area_side*sizeof(float));
-
-
-
-	dim3 threads_(SUB_IMG, SUB_IMG);
-	dim3 blocks_(1, 1);
-	cudaSimpleGetBestCorrelate<<<blocks_,threads_>>>(m_img2_dev,x,y,
-		im1_patch_device, medium1, stDev1, dev_corr);
-
-	
-	float* host_corr =  new float [area_side*area_side];
-	cudaMemcpy(host_corr, dev_corr, area_side*area_side*sizeof(float), cudaMemcpyDeviceToHost);
-	// w tym miejscu mozemy dodac mechanizm zapisania punktow ktore naleza do najlepszej korelacji
-	float max_corr = -1;
-	for(int i = 0; i < area_side*area_side; i++)
-	{
-		max_corr = host_corr[i] > max_corr? host_corr[i] : max_corr;
-	}
-	return max_corr;
-
-}
-
-float CudaInterface::simpleGetBestCorrFromArea_v2(int x, int y){
-
-	// counting parameters of central patch of first image to simplfy and 
-	// optimize algorithm. We need:
-	//patch*patch array of pixel intensity values
-	//medium value of this pixels
-	//standart deviation of this patch
-
-	//zawiera wartości pikseli patcha z obrazu referencyjnego
-	int* im1_patch = new int[PATCH_SIZE*PATCH_SIZE];
-	int sum = 0;
-
-	//wypelnianmy danymi  im1_patch, oraz przy okazji liczymy sume tych elementow dla innych parametrow
-	for (int row = 0; row < PATCH_SIZE; row++)
-		for (int col = 0; col < PATCH_SIZE; col++)
-		{
-		int x_ = x - PATCH_SIZE / 2 + col;
-		int y_ = y - PATCH_SIZE / 2 + row;
-
-		int index = y_ * IMAGE_WIDTH + x_;
-		int temp = m_img1_host[index];
-		im1_patch[row * PATCH_SIZE + col] = temp;
-		sum += temp;
-		}
-
-	// wartosc srednia dla naszego patcha
-	int medium1 = (float)sum / ((float)PATCH_SIZE*(float)PATCH_SIZE);
-
-	//odchylenie standartowe
-	float stDev1 = 0;
-	for (int i = 0; i < PATCH_SIZE*PATCH_SIZE; i++)
-		stDev1 += pow((float)im1_patch[i] - medium1, 2);
-
-	int area_side = SUB_IMG - PATCH_SIZE + 1; // one side of results area matrix
-
-	int* im1_patch_device = NULL;
-	cudaMalloc((void**)&im1_patch_device, PATCH_SIZE*PATCH_SIZE*sizeof(int));
-	cudaMemcpy(im1_patch_device, im1_patch, PATCH_SIZE*PATCH_SIZE*sizeof(int), cudaMemcpyHostToDevice);
-
-	float* dev_corr = NULL;
-	cudaMalloc((void**)&dev_corr, area_side*area_side*sizeof(float));
-
-	dim3 threads_(area_side, area_side);
-	dim3 blocks_(1, 1);
-	cudaSimpleGetBestCorrelate_v2 << <blocks_, threads_ >> >(m_img2_dev, x, y,
-		im1_patch_device, medium1, stDev1, dev_corr);
-
-	float* host_corr = new float[area_side*area_side];
-	cudaMemcpy(host_corr, dev_corr, area_side*area_side*sizeof(float), cudaMemcpyDeviceToHost);
-
-	// w tym miejscu mozemy dodac mechanizm zapisania punktow ktore naleza do najlepszej korelacji
-	float max_corr = -1;
-	for (int i = 0; i < area_side*area_side; i++)
-	{
-		max_corr = host_corr[i] > max_corr ? host_corr[i] : max_corr;
-		//cout << " Corr = " << host_corr[i] << endl;
-	}
-
-	//cout << " Max correlation = " << max_corr << endl;
-
-	return max_corr;
-}
-
-float CudaInterface::simpleGetBestCorrFromArea_v3(int x, int y){
-
-	int area_side = SUB_IMG - PATCH_SIZE + 1; // one side of results area matrix
-
-	float* dev_corr = NULL;
-	cudaMalloc((void**)&dev_corr, area_side*area_side*sizeof(float));
-
-	dim3 threads(SUB_IMG, SUB_IMG);
-	dim3 blocks(1, 1);
-
-	cudaSimpleGetBestCorrelate_v3 << <blocks, threads >> >(m_img1_dev, m_img2_dev, x, y, dev_corr);
-
-	float* host_corr = new float[area_side*area_side];
-	cudaMemcpy(host_corr, dev_corr, area_side*area_side*sizeof(float), cudaMemcpyDeviceToHost);
-
-	// w tym miejscu mozemy dodac mechanizm zapisania punktow ktore naleza do najlepszej korelacji
-	float max_corr = -1;
-	for (int i = 0; i < area_side*area_side; i++)
-	{
-		max_corr = host_corr[i] > max_corr ? host_corr[i] : max_corr;
-		//cout << " Corr = " << host_corr[i] << endl;
-	}
-	//cout << " Max correlation = " << max_corr << endl;
-	return max_corr;
-}
-
-void CudaInterface::simpleCorrelate()
-{
-	cudaError start = cudaProfilerStart();
-	int outpWidth = IMAGE_WIDTH - PATCH_SIZE + 1;
-	int outpHeight = IMAGE_HEIGHT - PATCH_SIZE + 1;
-	float* corrMat = new float[outpWidth*outpHeight];
-
-	int finishedPercent = 0;
-
-	for (int col = 0; col < outpWidth; col++)
-		for (int row = 0; row < outpHeight; row++)
-		{
-		int index = row*outpWidth + col;
-			
-		//corrMat[index] = getBestCorrFromArea(col + PATCH_SIZE / 2, row + PATCH_SIZE / 2);
-
-		int actual = (col*outpHeight + row) * 100
-			/ (outpWidth * outpHeight);
-
-		if (actual > finishedPercent)
-		{
-			finishedPercent = actual;
-			cout << finishedPercent << " % " << endl;
-		}
-		}
-
-	cudaError stop = cudaProfilerStop();
-	array2Mat(corrMat);
-
+	cudaMemcpy(m_img1_dev, img1_host, numImageBytes, cudaMemcpyHostToDevice);
+	cudaMemcpy(m_img2_dev, img2_host, numImageBytes, cudaMemcpyHostToDevice);
+
+	delete[] img1_host;
+	delete[] img2_host;
 }
 
 void CudaInterface::fastCudaCorrelation(){
 	time_t start, stop;
 	double czas;
 	start = clock();
-#if 1
 	cudaError_t cudaStatus;
 	cudaStatus = cudaSetDevice(0);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
-		this->~CudaInterface();	}
+		return;
+	}
 
 	int glWidth = IMAGE_WIDTH - SUB_IMG + 1;
 	int glHeight = IMAGE_HEIGHT - SUB_IMG + 1;
 	const int block_side = SUB_IMG - PATCH_SIZE + 1;
 
-	float* corrMat_host = new float[glWidth*glHeight*block_side*block_side];
-	for (int i = 0; i < glWidth*glHeight*block_side*block_side; i++)
-		corrMat_host[i] = -1.0;
-
 	float* corrMat_dev;
 	//memory allocation on device
-	cudaStatus = cudaMalloc((void**)&corrMat_dev, glWidth*glHeight*block_side*block_side*sizeof(float) );
+	cudaStatus = cudaMalloc((void**)&corrMat_dev, glWidth*glHeight*block_side*block_side*sizeof(float));
 	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMalloc failed! Can't allocate memory \n ");
-		this->~CudaInterface();
-	}
-
-	//copying data to device memory
-	cudaStatus = cudaMemcpy(corrMat_dev, corrMat_host,
-		glWidth*glHeight*block_side*block_side*sizeof(float),
-		cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "\n cudaMemcpy failed! Can't copy host to device memory \n ");
-		this->~CudaInterface();
+		fprintf(stderr, "cudaMalloc of corrMat_dev failed! Can't allocate memory \n ");
+		return;
 	}
 
 	dim3 blocks(IMAGE_WIDTH / SUB_IMG + 1, IMAGE_HEIGHT / SUB_IMG + 1);
@@ -553,94 +85,293 @@ void CudaInterface::fastCudaCorrelation(){
 	int finishedPercent = 0;
 
 	int dist = SUB_IMG / 2 + 1; // starting distortion of first reference image patch
+
+	
 	for (int row = 0; row < SUB_IMG; row++)
 		for (int col = 0; col < SUB_IMG; col++){
 
-		int actual = (row*SUB_IMG + col) * 100
-			/ (SUB_IMG*SUB_IMG);
+		//int actual = (row*SUB_IMG + col) * 100
+		//	/ (SUB_IMG*SUB_IMG);
 
-		if (actual > finishedPercent)
-		{
-			finishedPercent = actual;
-			cout << finishedPercent << " % " << endl;
-		}
-
+		//if (actual > finishedPercent)
+		//{
+		//	finishedPercent = actual;
+		//	cout << finishedPercent << " % " << endl;
+		//}
+		
 		cudaFastCorrelation << <blocks, threads >> >(m_img1_dev, m_img2_dev, col+dist, row + dist, corrMat_dev);
 		cudaDeviceSynchronize();
+		
 		}
 
-	//cin.get();
-	cudaStatus = cudaMemcpy(corrMat_host, corrMat_dev,
-		glWidth*glHeight*block_side*block_side*sizeof(float),
+	
+#if 1
+	//start = clock();
+	float* final_corrMat_dev;
+	//memory allocation on device
+	cudaStatus = cudaMalloc((void**)&final_corrMat_dev, glWidth*glHeight*sizeof(float));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc of final_corrMat_dev failed! Can't allocate memory \n ");
+		return;
+	}
+	
+
+	int* posMat_dev;
+	//memory allocation on device
+	cudaStatus = cudaMalloc((void**)&posMat_dev, glWidth*glHeight*sizeof(int));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc of posMat_dev failed! Can't allocate memory \n ");
+		return;
+	}
+	
+	int grid_size = 32;
+	dim3 blocksToGetMax(glWidth/ grid_size + 1, glHeight/ grid_size + 1);
+	dim3 threadsToGetMax(grid_size, grid_size);
+
+	cudaGetMaxValues << <blocksToGetMax, threadsToGetMax >> >(corrMat_dev, final_corrMat_dev, posMat_dev);
+	//cudaGetMaxValues << <blocksToGetMax, threadsToGetMax >> >(corrMat_dev, final_corrMat_dev);
+	cudaDeviceSynchronize();
+
+
+	stop = clock();
+	float* final_corrMat_host = new float[glWidth*glHeight];
+	cudaStatus = cudaMemcpy(final_corrMat_host, final_corrMat_dev,
+		glWidth*glHeight*sizeof(float),
 		cudaMemcpyDeviceToHost);
 	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed! Can't copy from device memory to host\n ");
+		fprintf(stderr, "cudaMemcpy failed! Can't copy final_corrMat_dev from device memory to host\n ");\
+		cout << cudaGetErrorString(cudaStatus) << endl;
+		return;
+	}
+	
+
+	int* posMat_host = new int [glWidth*glHeight];
+	cudaStatus = cudaMemcpy(posMat_host, posMat_dev,
+		glWidth*glHeight*sizeof(int),
+		cudaMemcpyDeviceToHost);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed! Can't copy posMat from device memory to host\n ");
+		cout << cudaGetErrorString(cudaStatus) << endl;
+		return;
+	}
+	
+	
+	vector<vector< OutpStr>> outpVector;
+	outpVector.clear();
+	for(int i = 0; i < glHeight; i++)
+	{
+		vector< OutpStr> colResults;
+		colResults.clear();
+		for (int j = 0; j < glWidth; j++)
+		{
+			int startPosition = j + i*glWidth;
+
+			Point ref = Point(j, i);
+			int position = posMat_host[startPosition];
+			int x_dist = position - ((int)(position/block_side))*block_side - block_side / 2;
+			int y_dist = position/block_side - block_side / 2;
+
+ 
+			//cout << "Position: " << position << " position%block_side: " << position%block_side << " block_side / 2 " << block_side / 2 << endl;
+			//cout << "Distortions " << x_dist << " " << y_dist << endl;
+			
+			Point deform = Point(ref.x + x_dist, ref.y + y_dist);
+			//cout << "Point ref = " << ref << " point deform = " << deform << endl;
+			OutpStr tempStructure(ref, deform, final_corrMat_host[startPosition]);
+			colResults.push_back(tempStructure);
+			//cin.get();
+		}
+		outpVector.push_back(colResults);
+	}
+#endif
+
+#if 0
+	//start = clock();
+	float* corrMat_host = new float[glWidth*glHeight*block_side*block_side];
+	cudaStatus = cudaMemcpy(corrMat_host, corrMat_dev,
+		block_side*block_side*glWidth*glHeight*sizeof(float),
+		cudaMemcpyDeviceToHost);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed! Can't copy final_corrMat_dev from device memory to host\n ");
 		cout << cudaGetErrorString(cudaStatus) << endl;
 		this->~CudaInterface();
 	}
 
-	float* final_corr_mat = new float[glWidth*glHeight];
-
-	for (int i = 0; i < glWidth*glHeight; i++)
+	vector<vector< OutpStr>> outpVector;
+	for(int i = 0; i < glHeight; i++)
 	{
-		float bestCorr = -1;
-		for (int j = 0; j < block_side*block_side; j++)
+		vector< OutpStr> colResults;
+		for (int j = 0; j < glWidth; j++)
 		{
-			float corr = corrMat_host[j + i*block_side*block_side];
-			bestCorr = bestCorr > corr ? bestCorr : corr;
+			float bestCorr = -1;
+			Point pRecursive = Point(j, i);
+			Point pDeformable = Point(0, 0);
+			int startPosition = (j + i*glWidth)*block_side*block_side;
+
+			int index_of_medium = startPosition + block_side / 2 + (block_side / 2 )*block_side;
+			if (corrMat_host[index_of_medium] > 0.99)
+			{
+				OutpStr tempStructure(pRecursive, pRecursive, bestCorr);
+				colResults.push_back(tempStructure);
+			}
+			else
+			{
+			for (int k = 0; k < block_side; k++)
+			{
+				for (int r = 0; r < block_side; r++)
+				{
+					int index = r + k * block_side + startPosition;
+					float correlacja = corrMat_host[index];
+					
+					if (correlacja > bestCorr)
+					{
+						bestCorr = correlacja;
+						pDeformable = Point(pRecursive.x + r - block_side / 2,
+											pRecursive.y + k - block_side / 2);
+					}
+				}
+			}
+			
+			OutpStr tempStructure(pRecursive, pDeformable, bestCorr);
+			colResults.push_back(tempStructure);
+			}
 		}
-		final_corr_mat[i] = bestCorr;
-		//cout << " bestCorr = " << bestCorr << endl;
+		outpVector.push_back(colResults);
 	}
-	cout << " Fast . Value of glMat[10,65] = " << corrMat_host[block_side*block_side*(24 + 22 * glWidth) + 21 + 21 * block_side] << endl;
-	array2Mat_v2(final_corr_mat);
-#endif
 	delete[] corrMat_host;
-
-#if 0
-	//int glWidth = 50;
-	//int glHeight = 35;
-	//const int block_side = 5;
-
-	int glWidth = IMAGE_WIDTH - PATCH_SIZE + 1;
-	int glHeight = IMAGE_HEIGHT - PATCH_SIZE + 1;
-	const int block_side = SUB_IMG - PATCH_SIZE + 1;
-
-	cout << " glWidth = " << glWidth << " glHeight = " << glHeight << " block_side = " << block_side << endl;
-
-	float** corrMat = new float* [glWidth*glHeight];
-	for (int i = 0; i < glWidth*glHeight; i++)
-		corrMat[i] = new float[block_side * block_side];
-
-	float** corrMat_dev;
-	size_t pitch;
-	cudaMallocPitch(&corrMat_dev, &pitch, block_side*block_side*sizeof(float), glWidth*glHeight);
-
-	cudaMemcpy2D(corrMat_dev, pitch, 
-		corrMat, block_side*block_side*sizeof(float),
-		block_side*block_side*sizeof(float), 
-		glWidth*glHeight, cudaMemcpyHostToDevice);
-#if 0
-	dim3 blocks(IMAGE_WIDTH / SUB_IMG + 1, IMAGE_HEIGHT / SUB_IMG + 1);
-	dim3 threads(SUB_IMG, SUB_IMG);
-
-	int dist = SUB_IMG / 2 + 1; // starting distortion of first reference image patch
-	for (int row = 0; row < SUB_IMG; row++)
-		for (int col = 0; col < SUB_IMG; col++)
-			cudaFastCorrelation3DMatrix << <blocks, threads >> >(m_img1_dev, m_img2_dev, col + dist, row + dist, corrMat_dev);
 #endif
 
-	for (int i = 0; i < glWidth*glHeight; ++i) {
-		delete[] corrMat[i];
-	}
-	delete[] corrMat;
-
-#endif
-
-	stop = clock();
+	
 	czas = (stop - start);// / (double)1000;
-	cout << "Czas wykonania fastCudaCorrelation = " << czas << "ms. " <<  endl;;
+	cout << "Czas obliczen w cuda = " << czas << "ms. " << endl;
+
+	cudaDrawDirectionHeatMap(outpVector);
+	
+	//VisualizeCC vcc;
+	//vcc.drawDirectionHeatMap(outpVector);
+}	
+
+
+
+void CudaInterface::cudaDrawDirectionHeatMap(vector<vector<OutpStr>>data)
+{
+	int height = data.size();
+	int width = data[0].size();
+	Mat hsv(height, width, CV_8UC3);
+
+	Mat correlate(height, width, CV_8U);
+	Mat distance(height, width, CV_8U);
+
+	cvtColor(hsv, hsv, CV_RGB2HSV);
+
+	int max_dist = sqrt( 2*pow(SUB_IMG - PATCH_SIZE - 1, 2));
+
+	for (int i = 0; i < height; i++)
+		for (int j = 0; j < width; j++)
+		{
+		OutpStr temp = data[i][j];
+
+		int dx = temp.m_point2.x - temp.m_point1.x;
+		int dy = temp.m_point2.y - temp.m_point1.y;
+		
+		float dist = sqrtf(pow(dx, 2) + pow(dy, 2));
+		float corr = (1 + temp.m_CCcoeff) / 2;
+
+	//	cout << "x_dist = " << dx << " y_dist " << dy << " dist = " << dist << endl;
+
+		int angle = (int)( (float)atan2(dy, dx) * 180 / 3.14);
+
+		if (angle < 0)
+			angle = 360 + angle;
+	
+		distance.at<uchar>(i, j) = 255-(int)(dist * 255.0 / (float)max_dist);
+		correlate.at<uchar>(i, j) = (int)(corr * 255);
+
+
+		//cout << "dist = " << dist << " S value = " << (int)(dist * 255 / max_dist) << endl;
+		//cin.get();
+		Vec3b tempHSV;
+		tempHSV.val[0] = angle / 2;// (255 * (angle)) / 360;
+		tempHSV.val[1] = (int)(dist * 255 / max_dist);
+		tempHSV.val[2] = (int)(corr * 255);;
+
+		hsv.at<Vec3b>(i, j) = tempHSV;
+		}
+	cvtColor(hsv, hsv, CV_HSV2BGR);
+	imwrite("img/CudaVisualizeDirection.jpg", hsv);
+
+	Mat distColor = Mat::zeros(height, width, CV_32F);
+	Mat corrColor = Mat::zeros(height, width, CV_32F);
+
+	applyColorMap(distance, distColor, COLORMAP_OCEAN);
+	applyColorMap(correlate, corrColor, COLORMAP_OCEAN);
+	imwrite("img/distCOLORMAP_OCEAN.jpg", distColor);
+	imwrite("img/corrCOLORMAP_OCEAN.jpg", corrColor);
+
+
+
+#if 0
+	cout << "For 359 = " << (255 * (359)) / 360 << endl;
+	cout << "For 90 = " << (255 * (90)) / 360 << endl;
+	cout << "For 180 = " << (255 * (180)) / 360 << endl;
+	cout << "For 270 = " << (255 * (270)) / 360 << endl;
+
+
+
+
+	Mat test_hsv(height, width, CV_8UC3);
+	for (int i = 0; i < height; i++)
+		for (int j = 0; j < width; j++)
+		{
+		Vec3b tempHSV;
+		tempHSV.val[0] = 22.5;
+		tempHSV.val[1] = 255;
+		tempHSV.val[2] = 255;
+
+		test_hsv.at<Vec3b>(i, j) = tempHSV;
+		}
+	cvtColor(test_hsv, test_hsv, CV_HSV2BGR);
+	imwrite("img/testHSV_45.jpg", test_hsv);
+
+	for (int i = 0; i < height; i++)
+		for (int j = 0; j < width; j++)
+		{
+		Vec3b tempHSV;
+		tempHSV.val[0] = 60;
+		tempHSV.val[1] = 255;
+		tempHSV.val[2] = 255;
+
+		test_hsv.at<Vec3b>(i, j) = tempHSV;
+		}
+	cvtColor(test_hsv, test_hsv, CV_HSV2BGR);
+	imwrite("img/testHSV_120.jpg", test_hsv);
+
+	for (int i = 0; i < height; i++)
+		for (int j = 0; j < width; j++)
+		{
+		Vec3b tempHSV;
+		tempHSV.val[0] = 45;
+		tempHSV.val[1] = 255;
+		tempHSV.val[2] = 255;
+		test_hsv.at<Vec3b>(i, j) = tempHSV;
+		}
+	cvtColor(test_hsv, test_hsv, CV_HSV2BGR);
+	imwrite("img/testHSV_90.jpg", test_hsv);
+
+	for (int i = 0; i < height; i++)
+		for (int j = 0; j < width; j++)
+		{
+		Vec3b tempHSV;
+		tempHSV.val[0] = 90;
+		tempHSV.val[1] = 255;
+		tempHSV.val[2] = 255;
+		test_hsv.at<Vec3b>(i, j) = tempHSV;
+		}
+	cvtColor(test_hsv, test_hsv, CV_HSV2BGR);
+	imwrite("img/testHSV_180.jpg", test_hsv);
+#endif
 }
+
 
 void CudaInterface::deviceInfo(){
 	int devCount;

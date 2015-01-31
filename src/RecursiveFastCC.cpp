@@ -144,13 +144,17 @@ float FastCC::getRecursiveCorrelate(Point p1, Point p2, float pVal)
 		return 0;
 	}
 
-	float   Q = getQ(p1, p2);
+	float Q = getQ(p1, p2);
 	float F = getF(p1);
 	float G = getG(p2);
 
-	//cout << "\n In Recursive points " << p1 << " and " << p2 << endl;
-	//cout << " P= " << pVal << " Q= " << Q << " diff = " << pVal-Q <<  " F= " << F<< " G= "<< G << endl;
-	return (pVal - Q) / sqrt(F*G);
+	float correlate = (pVal - Q) / sqrt(F*G);
+	//cout << pVal << "  " << Q << " " << F << "  " << G << " "  << correlate << "  " << p1 << "  " << p2 << endl;
+	
+	if (F == 0 && G == 0 || correlate > 1.0)
+		return 1;
+
+	return correlate;
 }
 
 float FastCC::getBestCorrFromArea(Point pnt)
@@ -347,11 +351,18 @@ OutpStr FastCC::getRecursiveBestCorrFromAreaWithOutputStructure(Point pnt, Pmat 
 		return corrStruct;
 	}
 
+	if (getRecursiveCorrelate(pnt, pnt, pmat.getPFromMat((m_subImg - m_patch) / 2, (m_subImg - m_patch) / 2)) == 1)
+	{
+		OutpStr corrStruct(pnt, pnt, 1);
+		return corrStruct;
+	}
+
 	float bestCorrelation = -2.0;
 	Point pointOfBestCorrelate = Point(0, 0);
 
 	int tempRange = (m_subImg - m_patch) / 2;
 	Point secondPoint = Point(0, 0);
+
 	for (int i = -tempRange; i <= tempRange; i++)
 		for (int j = -tempRange; j <= tempRange; j++)
 		{
@@ -366,11 +377,10 @@ OutpStr FastCC::getRecursiveBestCorrFromAreaWithOutputStructure(Point pnt, Pmat 
 			pointOfBestCorrelate = secondPoint;
 		}
 
-
-		if (bestCorrelation == 1){
-			OutpStr corrStruct(pnt, pointOfBestCorrelate, 1);
-			return corrStruct;
-		}
+		//if (bestCorrelation == 1){
+		//	OutpStr corrStruct(pnt, pointOfBestCorrelate, 1);
+		//	return corrStruct;
+		//}
 		}
 
 	OutpStr corrStruct(pnt, pointOfBestCorrelate, bestCorrelation);
@@ -385,7 +395,6 @@ void FastCC::recursiveFastCCStructure()
 	
 	vector< OutpStr> cols;
 	//vector<vector <OutpStr>> outpVec;
-
 
 	int finishedPercent = 0;
 	for (int j = 0; j < newNrOfRows; j++)
@@ -413,8 +422,11 @@ void FastCC::recursiveFastCCStructure()
 		m_nextYpVal = m_pVal.next_y_Pmat(m_gl1.m_img, m_gl2.m_img);
 		m_nextXpVal = m_pVal.next_x_Pmat(m_gl1.m_img, m_gl2.m_img);
 	}
-	//visualizeVector(outpVec);
 
+	VisualizeCC vcc;
+	vcc.drawDirectionHeatMap(outpVec);
+	vcc.drawCorrelationHeatMap(outpVec);
+	vcc.drawDistHeatMap(outpVec);
 }
 #endif
 
@@ -437,3 +449,4 @@ void FastCC::visualizeVector(vector <vector <OutpStr> > outpVector)
 	
 	imwrite("img/finalfinalfinal.jpg", corrMat);
 }
+

@@ -135,11 +135,14 @@ float NCC::getCorrelate(Point p1, Point p2)
 	int dist = (m_patch-1) / 2;
 	int maxX = max(p1.x, p2.x);
 	int maxY = max(p1.y, p2.y);
+	int minY = min(p1.y, p2.y);
+	int minX = min(p1.x, p2.x);
+
 	// we are sure that m_img1.size() == m_img2.size()
-	if( ( maxX > m_img1.cols-dist) ||
-		( maxX - dist < 0 )     ||
-		( maxY > m_img1.rows-dist)||
-		( maxY - dist < 0 )         )
+	if( ( maxX > m_img1.cols-dist-1) ||
+		( minX - dist < 0 )     ||
+		( maxY > m_img1.rows-dist-1)||
+		( minY - dist < 0 )         )
 	{
 		cout << " Out of range of image, chose other point. GetCorrelate(p1,p2) " << endl;
 		cout << " Press any key" << endl;
@@ -158,6 +161,7 @@ float NCC::getCorrelate(Point p1, Point p2)
 
 	denominator = sqrtf( stDev1 * stDev2 );
 	int counter = 0;
+
 	for( int i = -dist; i <= dist; i++)
 		for( int j = -dist; j <= dist; j++)
 		{
@@ -167,50 +171,61 @@ float NCC::getCorrelate(Point p1, Point p2)
 				float temp2 = m_img2.at<uchar>(
 						Point( p2.x+i,p2.y+j ) );
 
-			//	cout << " temps " << temp1 << "  " << temp2 << endl;
+
 				numerator   += ( temp1 - med1 ) *
 							   ( temp2 - med2 );
 			//	cout << "num = " << numerator << endl;
 				counter++;
 		}
 
-	//cout << "\nNumerator: " << numerator <<" denominator: " << denominator <<
-	//		" counter = " << counter << endl;
+	if (numerator == 0)
+		return 1;
+	
+
 	return numerator/denominator;
 }
 
-float NCC::getBestCorrFromArea(Point pnt)
+OutpStr NCC::getBestCorrFromArea(Point pnt)
 {
 	int dist = (m_subImg-1) / 2;
-	if( ( pnt.x > m_img1.cols-dist) ||
+	if( ( pnt.x >= m_img1.cols-dist) ||
 		( pnt.x - dist < 0 )     ||
-		( pnt.y > m_img1.rows-dist) ||
+		( pnt.y >= m_img1.rows-dist) ||
 		( pnt.y - dist < 0 )         )
 	{
 		cout << " Out of range. getBestCorrFromArea function. " << endl;
+		cout << "Pnt = " << pnt << endl;
 		cout << " Press any key" << endl;
 		cin.get();
-		return 0;
+		return OutpStr();
 	}
 
 	float bestCorrelation = -2;
+	Point p_deform = Point(0, 0);
 	int tempRange = ( m_subImg - m_patch ) / 2;
+
+	if (getCorrelate(pnt, pnt) == 1)
+	{
+		OutpStr outp(pnt, pnt, 1);
+		return outp;
+	}
+
 	//search subImg region with patch
 	for(int i = -tempRange; i <= tempRange; i++ )
 		for(int j = -tempRange; j<=tempRange; j++)
 		{
-			float tempCorrelate = getCorrelate(pnt,Point(pnt.x+i, pnt.y+j));
+		Point p_2 = Point(pnt.x + i, pnt.y + j);
+		float tempCorrelate = getCorrelate(pnt, p_2);
 
-			bestCorrelation = bestCorrelation >
-						tempCorrelate ? bestCorrelation:tempCorrelate;
-
-			if(bestCorrelation == 1)
-				return bestCorrelation;
-
-	//		cout << "Corr:" << pnt << " " << Point(pnt.x+i, pnt.y+j) <<
-	//				" " << tempCorrelate << " " << bestCorrelation << endl;
+			if (tempCorrelate > bestCorrelation)
+			{
+				bestCorrelation = tempCorrelate;
+				p_deform = p_2;
+			}
 		}
-	return bestCorrelation;
+
+	OutpStr outp(pnt, p_deform, bestCorrelation);
+	return outp;
 }
 
 void NCC::correlate()
@@ -225,17 +240,23 @@ void NCC::correlate()
 	int newNrOfCols = m_img1.cols - m_subImg + 1;
 
 	Mat corrMat = Mat::zeros(newNrOfRows, newNrOfCols, CV_32F);
+	vector< vector< OutpStr >> results;
+
 	//cout << " Img size = " << corrMat.size() << endl;
 	int finishedPercent = 0;
 	//cout << m_subImg << m_subImg/2 << endl;
-	for(int i = 0; i < newNrOfCols; i++)
+
+	time_t start, stop;
+	double czas;
+	start = clock();
+	for (int i = 0; i < newNrOfCols; i++){
+		vector<OutpStr> col;
 		for(int j = 0; j < newNrOfRows; j++)
 		{
 			Point tempPnt = Point(i+m_subImg/2,j+m_subImg/2);
-			//cout << "Pnt " <<  tempPnt << endl;
-			float corr = getBestCorrFromArea(tempPnt);
-			corrMat.at<float>(j,i) = (corr+1.0)/2.0;
-	//		cout << "2" << endl;
+			OutpStr corr = getBestCorrFromArea(tempPnt);
+			col.push_back(corr);
+
 			int actual = (i*newNrOfRows+j)*100
 						/(newNrOfRows*newNrOfCols);
 
@@ -245,7 +266,17 @@ void NCC::correlate()
 				cout << finishedPercent << " % " << endl;
 			}
 		}
-    imwrite("img/BrutalCorrelation.jpg", corrMat*255);
+		results.push_back(col);
+	}
+	stop = clock();
+	czas = (stop - start);
+	//cout << "\n NCC, czas wykonania wynosi " << czas << "ms" << endl;
+
+	VisualizeCC vcc;
+	vcc.drawCorrelationHeatMap(results, "img/brutCorrHM.jpg");
+	vcc.drawDirectionHeatMap(results, "img/brutDirection.jpg");
+	vcc.drawDistHeatMap(results, "img/brutDist.jpg");
+
 #endif
 
 }
