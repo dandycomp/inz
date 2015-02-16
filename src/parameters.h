@@ -2,39 +2,10 @@
 #define params
 #include <string>
 
-#if 0
-const std::string image1name = "img/test/ref1.tif";
-const std::string image2name = "img/test/ref1.tif";// "img/test/skrecenie1.tif";
-static const int IMAGE_WIDTH_ = 1500;//szerokosc obrazu
-static const int IMAGE_HEIGHT_ = 1500;//wysokosc obrazu
-#endif
-
-
-#if 0
-
-const std::string image1name = "img/test1/ref.jpg";
-//const std::string image2name = "img/test1/ref_edited.jpg";
-const std::string image2name = "img/test1/wave.jpg";
-static const int IMAGE_WIDTH_ = 1000;//szerokosc obrazu
-static const int IMAGE_HEIGHT_ = 1000;//wysokosc obrazu
-
-#endif
-
-
-#if 0
-const std::string image1name = "img/2500_1.tif";
-const std::string image2name = "img/2500_1_smudge.tif";
-static const int IMAGE_WIDTH_ = 2500;//szerokosc obrazu
-static const int IMAGE_HEIGHT_ = 2500;//wysokosc obrazu
-#endif
-
-
-#if 1
 const std::string image1name = "img/test1/2/ref.jpg";
 const std::string image2name = "img/test1/2/img_edited.jpg";
 static const int IMAGE_WIDTH_ = 1000;//szerokosc obrazu
 static const int IMAGE_HEIGHT_ = 1000;//wysokosc obrazu
-#endif
 
 
 static const int PATCH_SIZE = 25;// rozmiar patcha

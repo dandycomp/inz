@@ -18,57 +18,6 @@ using namespace cv;
 time_t ncc_start, ncc_stop, fastRec_start, fastRec_stop, cuda_start, cuda_stop;
 double NCCtime, FastRecTime, cudaTime;
 
-
-#if 0
-void main(){
-	Mat img = imread("img/HighContrastImages/HCY00 X00.tif");
-	resize(img, img, Size(), 4, 4, INTER_CUBIC);
-
-	if (!img.data)
-	{
-		cout << "Image is not detected " << endl;
-		return;
-	}
-	//Mat img = imread("img/test/ref1.tif");
-
-	cvtColor(img, img, CV_RGB2GRAY);
-	
-	Rect ref = Rect(0, 0, 1000, 1000);
-	Mat img_ref = img(ref);
-	Mat img_edited;
-	img_ref.copyTo(img_edited);
-
-	for (int row = 0; row < 100; row++)
-	{
-		for (int col = 0; col < 100; col++)
-		{
-			//top
-			int temp_col = 450;
-			int temp_row = 100;
-			img_edited.at<uchar>(row + temp_row, col + temp_col) = (int)img_ref.at<uchar>(row + temp_row + 3, col + temp_col);
-			
-			//bottom
-			temp_col = 450;
-			temp_row = 800;
-			img_edited.at<uchar>(row + temp_row, col + temp_col) = (int)img_ref.at<uchar>(row + temp_row - 3, col + temp_col);
-
-			//left
-			temp_col = 100;
-			temp_row = 450;
-			img_edited.at<uchar>(row + temp_row, col + temp_col) = (int)img_ref.at<uchar>(row + temp_row, col + temp_col + 3);
-
-			//right
-			temp_col = 800;
-			temp_row = 450;
-			img_edited.at<uchar>(row + temp_row, col + temp_col) = (int)img_ref.at<uchar>(row + temp_row, col + temp_col - 3);
-
-		}
-	}
-	imwrite("img/test1/2/ref.jpg", img_ref);
-	imwrite("img/test1/2/img_edited.jpg", img_edited);
-}
-#endif
-
 #if 1
 int main(int argc, char *argv[])
 {
