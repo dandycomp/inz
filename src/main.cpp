@@ -25,15 +25,15 @@ int main(int argc, char *argv[])
 	Mat img1 = imread(image1name);
 	Mat img2 = imread(image2name);
 
+	if (!( img1.data && img2.data))
+	{
+		cout << " Niepoprawna sciezka do obrazow " << endl;
+		return 1;
+	}
+	
 	// interpolacja
 	resize(img1, img1, Size(), RESIZE_COEFF, RESIZE_COEFF, INTER_CUBIC);
 	resize(img2, img2, Size(), RESIZE_COEFF, RESIZE_COEFF, INTER_CUBIC);
-
-	if (!img1.data)
-	{
-		img1 = imread("../../" + image1name);
-		img2 = imread("../../" + image2name);
-	}
 
 	// zmiana na postac szarosciowa
 	cvtColor(img1, img1, CV_RGB2GRAY);
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	FastCC fcc;
 	fcc.setParameters(gl1, gl2);
 	//funkcja obliczenia cross korelacji metoda FastRecursive
-	//fcc.recursiveFastCC();
+	fcc.recursiveFastCC();
 
 	fastRec_stop = clock();
 	FastRecTime = fastRec_stop - fastRec_start;
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 	cuda_interf.setParameters(img1, img2);
 	//cuda_interf.deviceInfo();
 	// funkcja obliczajaca cross korelacje metoda CUDAFastCorrelation
-	//cuda_interf.fastCudaCorrelation();
+	cuda_interf.fastCudaCorrelation();
 
 	cuda_stop = clock();
 	cudaTime = cuda_stop - cuda_start;

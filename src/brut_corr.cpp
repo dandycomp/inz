@@ -233,19 +233,20 @@ void NCC::correlate()
 
 	Mat corrMat = Mat::zeros(newNrOfRows, newNrOfCols, CV_32F);
 	vector< vector< OutpStr >> results;
-
+	vector<OutpStr> col;
 	int finishedPercent = 0;
 	cout << " \nWyznaczenie cross korelacji metoda NCC, ukonczono: " << endl;
-	for (int i = 0; i < newNrOfCols; i++){
-		vector<OutpStr> col;
-		for(int j = 0; j < newNrOfRows; j++)
+
+	for (int j = 0; j < newNrOfRows; j++){
+		col.clear();
+		for (int i = 0; i < newNrOfCols; i++)
 		{
-			Point tempPnt = Point(i+m_subImg/2,j+m_subImg/2);
+			Point tempPnt = Point(i + m_subImg / 2, j + m_subImg / 2);
 			OutpStr corr = getBestCorrFromArea(tempPnt);
 			col.push_back(corr);
 
-			int actual = (i*newNrOfRows+j)*100
-						/(newNrOfRows*newNrOfCols);
+			int actual = (j*newNrOfCols + i) * 100
+				/ (newNrOfRows*newNrOfCols);
 
 			if(actual > finishedPercent)
 			{
