@@ -1,5 +1,4 @@
 #include "p_mat.hpp"
-#include "utils.hpp"
 
 Pmat::Pmat(Pmat& pm){
 
@@ -35,7 +34,7 @@ void Pmat::writePmat()
 {
 cout << m_Pmat << endl;
 }
-// patch oraz subimg brane ze skladowych klasy
+
 void Pmat::setPMat(Mat& img1, Mat& img2)
 {
     int sizeOfMat = m_subImg - m_patch + 1;
@@ -52,15 +51,13 @@ void Pmat::setPMat(Mat& img1, Mat& img2)
 		}
 }
 
-//get value fro, m_Pmat in (i,j) position
+
 int Pmat::getPFromMat(int i, int j)
 {
     return (int)m_Pmat.at<float>(j,i);
 }
-//do poprawki
 
-// funkcja wyznacza macierz Pmat dla nastepnego X-a na obrazie 
-//referencyjnym
+
 int  Pmat::next_P_x(int col, int row, Mat& img1, Mat& img2)
 {
 int sizeOfMat = m_subImg - m_patch + 1;
@@ -76,7 +73,6 @@ for(int i = -m_patch/2; i <= m_patch/2; i++)
     {
         int first  = img1.at<uchar>(p_nextXFirst.y+i, p_nextXFirst.x+m_patch/2);
         int second = img2.at<uchar>(p_nextXSecond.y+i, p_nextXSecond.x+m_patch/2);
-        //cout << "I first,second " << first << "  " << second << endl;
         I += first*second;
     }
 //Counting of J argument. Equation (27)
@@ -85,10 +81,9 @@ for(int i = -m_patch/2; i <= m_patch/2; i++)
         // -1 na koncu oznacza ze odejmujemy od starego punkta, a nie od nowego
         int first  = img1.at<uchar>(p_nextXFirst .y+i, p_nextXFirst .x-m_patch/2-1);
         int second = img2.at<uchar>(p_nextXSecond.y+i, p_nextXSecond.x-m_patch/2-1);
-       // cout << "J first,second " << first << "  " << second << endl;
         J += first*second;
     }
-//cout << " \nPoint:" << Point(col, row) << " Values " << oldPVal<< " " << I << " " << J << endl;
+
 return oldPVal + I - J;
 }
 

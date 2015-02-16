@@ -1,10 +1,7 @@
 #ifndef GL_MAT_PREPROCESSING_HPP_INCLUDED
 #define GL_MAT_PREPROCESSING_HPP_INCLUDED
 
-
-#include "opencv2\highgui\highgui.hpp"
 #include "opencv2\core\core.hpp"
-#include "opencv2\imgproc\imgproc.hpp"
 
 #include <iostream>
 
@@ -27,7 +24,6 @@ private:
     int getSumFromIntegral(Mat&, Point);
     void toIntegral(Mat& outpSum, Mat& outpSqSum);
     void setZero();
-
 
 public:
     Mat m_img;

@@ -167,14 +167,12 @@ float NCC::getCorrelate(Point p1, Point p2)
 		{
 				float temp1 = m_img1.at<uchar>(
 						Point( p1.x+i,p1.y+j ) );
-                //cout << Point( p1.x+i,p1.y+j ) << endl;
 				float temp2 = m_img2.at<uchar>(
 						Point( p2.x+i,p2.y+j ) );
 
 
 				numerator   += ( temp1 - med1 ) *
 							   ( temp2 - med2 );
-			//	cout << "num = " << numerator << endl;
 				counter++;
 		}
 
@@ -230,25 +228,14 @@ OutpStr NCC::getBestCorrFromArea(Point pnt)
 
 void NCC::correlate()
 {
-	//float Bestcorr = getBestCorrFromArea(Point(100,100));
-	//float corr = getCorrelate(Point(453,353), Point(453,353));
-	//float corr = getCorrelate(Point(100,50), Point(100,50));
-//	cout << "\n Brutal method correlation = " << corr <<endl;//<< " and best corr = " << Bestcorr << endl;
-
-#if 1
 	int newNrOfRows = m_img1.rows - m_subImg + 1;
 	int newNrOfCols = m_img1.cols - m_subImg + 1;
 
 	Mat corrMat = Mat::zeros(newNrOfRows, newNrOfCols, CV_32F);
 	vector< vector< OutpStr >> results;
 
-	//cout << " Img size = " << corrMat.size() << endl;
 	int finishedPercent = 0;
-	//cout << m_subImg << m_subImg/2 << endl;
-
-	time_t start, stop;
-	double czas;
-	start = clock();
+	cout << " \nWyznaczenie cross korelacji metoda NCC, ukonczono: " << endl;
 	for (int i = 0; i < newNrOfCols; i++){
 		vector<OutpStr> col;
 		for(int j = 0; j < newNrOfRows; j++)
@@ -268,15 +255,7 @@ void NCC::correlate()
 		}
 		results.push_back(col);
 	}
-	stop = clock();
-	czas = (stop - start);
-	//cout << "\n NCC, czas wykonania wynosi " << czas << "ms" << endl;
 
 	VisualizeCC vcc;
-	vcc.drawCorrelationHeatMap(results, "img/brutCorrHM.jpg");
-	vcc.drawDirectionHeatMap(results, "img/brutDirection.jpg");
-	vcc.drawDistHeatMap(results, "img/brutDist.jpg");
-
-#endif
-
+	vcc.drawDirectionHeatMap(results, "img/NCC.jpg");
 }

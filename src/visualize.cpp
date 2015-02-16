@@ -71,7 +71,7 @@ void VisualizeCC::drawDirectionHeatMap(vector<vector<OutpStr>>data, string img_n
 		int dy = temp.m_point2.y - temp.m_point1.y;
 		float dist = sqrtf(pow(dx, 2) + pow(dy, 2));
 
-		float angle = atan2(dy, dx) * 180 / 3.14;
+		float angle = atan2(-dy, dx) * 180 / 3.14;
 		if (angle < 0)
 			angle = 360 + angle;
 
@@ -83,6 +83,6 @@ void VisualizeCC::drawDirectionHeatMap(vector<vector<OutpStr>>data, string img_n
 
 		hsv.at<Vec3b>(i, j) = tempHSV;
 		}
-	cvtColor(hsv, hsv, CV_HSV2RGB);
+	cvtColor(hsv, hsv, CV_HSV2BGR);
 	imwrite(img_name, hsv);
 }

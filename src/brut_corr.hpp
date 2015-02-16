@@ -21,14 +21,12 @@
 using namespace std;
 using namespace cv;
 
-//w programie jest duzo spradzen i warunkow.
-//W wersji ostatecznej mozna robic
-//wszystkie sprawdzenia na poczatku za jednym razem
+
 //Operating on float type. Final Mat image of type CV_32F
 class NCC{
 
 public:
-	NCC(){}//setZero();}
+	NCC(){}
 	void setParameters(Mat&, Mat&,size_t subImg, size_t patch);
 	void correlate();
 

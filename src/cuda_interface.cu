@@ -86,29 +86,26 @@ void CudaInterface::fastCudaCorrelation(){
 
 	int dist = SUB_IMG / 2 + 1; // starting distortion of first reference image patch
 
-	
+	cout << " \nWyznaczenie cross korelacji metoda CUDAFastCC, ukonczono: " << endl;
 	for (int row = 0; row < SUB_IMG; row++)
 		for (int col = 0; col < SUB_IMG; col++){
 
-		//int actual = (row*SUB_IMG + col) * 100
-		//	/ (SUB_IMG*SUB_IMG);
+		int actual = (row*SUB_IMG + col) * 100
+			/ (SUB_IMG*SUB_IMG);
 
-		//if (actual > finishedPercent)
-		//{
-		//	finishedPercent = actual;
-		//	cout << finishedPercent << " % " << endl;
-		//}
+		if (actual > finishedPercent)
+		{
+			finishedPercent = actual;
+			cout << finishedPercent << " % " << endl;
+		}
 		
 		cudaFastCorrelation << <blocks, threads >> >(m_img1_dev, m_img2_dev, col+dist, row + dist, corrMat_dev);
 		cudaDeviceSynchronize();
 		
 		}
 
-	
 #if 1
-	//start = clock();
 	float* final_corrMat_dev;
-	//memory allocation on device
 	cudaStatus = cudaMalloc((void**)&final_corrMat_dev, glWidth*glHeight*sizeof(float));
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "cudaMalloc of final_corrMat_dev failed! Can't allocate memory \n ");
@@ -117,7 +114,6 @@ void CudaInterface::fastCudaCorrelation(){
 	
 
 	int* posMat_dev;
-	//memory allocation on device
 	cudaStatus = cudaMalloc((void**)&posMat_dev, glWidth*glHeight*sizeof(int));
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "cudaMalloc of posMat_dev failed! Can't allocate memory \n ");
@@ -129,7 +125,6 @@ void CudaInterface::fastCudaCorrelation(){
 	dim3 threadsToGetMax(grid_size, grid_size);
 
 	cudaGetMaxValues << <blocksToGetMax, threadsToGetMax >> >(corrMat_dev, final_corrMat_dev, posMat_dev);
-	//cudaGetMaxValues << <blocksToGetMax, threadsToGetMax >> >(corrMat_dev, final_corrMat_dev);
 	cudaDeviceSynchronize();
 
 
@@ -155,7 +150,6 @@ void CudaInterface::fastCudaCorrelation(){
 		return;
 	}
 	
-	
 	vector<vector< OutpStr>> outpVector;
 	outpVector.clear();
 	for(int i = 0; i < glHeight; i++)
@@ -171,15 +165,9 @@ void CudaInterface::fastCudaCorrelation(){
 			int x_dist = position - ((int)(position/block_side))*block_side - block_side / 2;
 			int y_dist = position/block_side - block_side / 2;
 
- 
-			//cout << "Position: " << position << " position%block_side: " << position%block_side << " block_side / 2 " << block_side / 2 << endl;
-			//cout << "Distortions " << x_dist << " " << y_dist << endl;
-			
 			Point deform = Point(ref.x + x_dist, ref.y + y_dist);
-			//cout << "Point ref = " << ref << " point deform = " << deform << endl;
 			OutpStr tempStructure(ref, deform, final_corrMat_host[startPosition]);
 			colResults.push_back(tempStructure);
-			//cin.get();
 		}
 		outpVector.push_back(colResults);
 	}
@@ -243,133 +231,58 @@ void CudaInterface::fastCudaCorrelation(){
 
 	
 	czas = (stop - start);// / (double)1000;
-	cout << "Czas obliczen w cuda = " << czas << "ms. " << endl;
+	cout << "Czas obliczen w cuda nie uwzgledniajac kopiowan = " << czas << "ms. " << endl;
 
 	cudaDrawDirectionHeatMap(outpVector);
-	
-	//VisualizeCC vcc;
-	//vcc.drawDirectionHeatMap(outpVector);
+
 }	
-
-
 
 void CudaInterface::cudaDrawDirectionHeatMap(vector<vector<OutpStr>>data)
 {
 	int height = data.size();
 	int width = data[0].size();
 	Mat hsv(height, width, CV_8UC3);
-
-	Mat correlate(height, width, CV_8U);
-	Mat distance(height, width, CV_8U);
-
 	cvtColor(hsv, hsv, CV_RGB2HSV);
 
-	int max_dist = sqrt( 2*pow(SUB_IMG - PATCH_SIZE - 1, 2));
+	//Mat correlate(height, width, CV_8U);
+	//Mat distance(height, width, CV_8U);
 
+	//cvtColor(hsv, hsv, CV_RGB2HSV);
+
+	int max_dist = (SUB_IMG - PATCH_SIZE) / 2;
 	for (int i = 0; i < height; i++)
 		for (int j = 0; j < width; j++)
 		{
-		OutpStr temp = data[i][j];
 
+		OutpStr temp = data[i][j];
+	
 		int dx = temp.m_point2.x - temp.m_point1.x;
 		int dy = temp.m_point2.y - temp.m_point1.y;
-		
+		//cout << dx << "  " << dy << endl << endl;
+
+
 		float dist = sqrtf(pow(dx, 2) + pow(dy, 2));
 		float corr = (1 + temp.m_CCcoeff) / 2;
 
-	//	cout << "x_dist = " << dx << " y_dist " << dy << " dist = " << dist << endl;
-
-		int angle = (int)( (float)atan2(dy, dx) * 180 / 3.14);
-
+		//uzywamy -dy zeby os 0,0 zaczynala od czytelnika strony
+		float angle = atan2(-dy, dx) * 180 / 3.14;
+		//cout << angle << endl << endl;
 		if (angle < 0)
 			angle = 360 + angle;
 	
-		distance.at<uchar>(i, j) = 255-(int)(dist * 255.0 / (float)max_dist);
-		correlate.at<uchar>(i, j) = (int)(corr * 255);
+		//distance.at<uchar>(i, j) = 255-(int)(dist * 255.0 / (float)max_dist);
+		//correlate.at<uchar>(i, j) = (int)(corr * 255);
 
-
-		//cout << "dist = " << dist << " S value = " << (int)(dist * 255 / max_dist) << endl;
-		//cin.get();
 		Vec3b tempHSV;
 		tempHSV.val[0] = angle / 2;// (255 * (angle)) / 360;
 		tempHSV.val[1] = (int)(dist * 255 / max_dist);
-		tempHSV.val[2] = (int)(corr * 255);;
+		tempHSV.val[2] = 255;// (int)(corr * 255);
 
 		hsv.at<Vec3b>(i, j) = tempHSV;
 		}
 	cvtColor(hsv, hsv, CV_HSV2BGR);
 	imwrite("img/CudaVisualizeDirection.jpg", hsv);
 
-	Mat distColor = Mat::zeros(height, width, CV_32F);
-	Mat corrColor = Mat::zeros(height, width, CV_32F);
-
-	applyColorMap(distance, distColor, COLORMAP_OCEAN);
-	applyColorMap(correlate, corrColor, COLORMAP_OCEAN);
-	imwrite("img/distCOLORMAP_OCEAN.jpg", distColor);
-	imwrite("img/corrCOLORMAP_OCEAN.jpg", corrColor);
-
-
-
-#if 0
-	cout << "For 359 = " << (255 * (359)) / 360 << endl;
-	cout << "For 90 = " << (255 * (90)) / 360 << endl;
-	cout << "For 180 = " << (255 * (180)) / 360 << endl;
-	cout << "For 270 = " << (255 * (270)) / 360 << endl;
-
-
-
-
-	Mat test_hsv(height, width, CV_8UC3);
-	for (int i = 0; i < height; i++)
-		for (int j = 0; j < width; j++)
-		{
-		Vec3b tempHSV;
-		tempHSV.val[0] = 22.5;
-		tempHSV.val[1] = 255;
-		tempHSV.val[2] = 255;
-
-		test_hsv.at<Vec3b>(i, j) = tempHSV;
-		}
-	cvtColor(test_hsv, test_hsv, CV_HSV2BGR);
-	imwrite("img/testHSV_45.jpg", test_hsv);
-
-	for (int i = 0; i < height; i++)
-		for (int j = 0; j < width; j++)
-		{
-		Vec3b tempHSV;
-		tempHSV.val[0] = 60;
-		tempHSV.val[1] = 255;
-		tempHSV.val[2] = 255;
-
-		test_hsv.at<Vec3b>(i, j) = tempHSV;
-		}
-	cvtColor(test_hsv, test_hsv, CV_HSV2BGR);
-	imwrite("img/testHSV_120.jpg", test_hsv);
-
-	for (int i = 0; i < height; i++)
-		for (int j = 0; j < width; j++)
-		{
-		Vec3b tempHSV;
-		tempHSV.val[0] = 45;
-		tempHSV.val[1] = 255;
-		tempHSV.val[2] = 255;
-		test_hsv.at<Vec3b>(i, j) = tempHSV;
-		}
-	cvtColor(test_hsv, test_hsv, CV_HSV2BGR);
-	imwrite("img/testHSV_90.jpg", test_hsv);
-
-	for (int i = 0; i < height; i++)
-		for (int j = 0; j < width; j++)
-		{
-		Vec3b tempHSV;
-		tempHSV.val[0] = 90;
-		tempHSV.val[1] = 255;
-		tempHSV.val[2] = 255;
-		test_hsv.at<Vec3b>(i, j) = tempHSV;
-		}
-	cvtColor(test_hsv, test_hsv, CV_HSV2BGR);
-	imwrite("img/testHSV_180.jpg", test_hsv);
-#endif
 }
 
 

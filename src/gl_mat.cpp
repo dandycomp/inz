@@ -1,6 +1,5 @@
 
 #include "gl_mat.hpp"
-#include "utils.hpp"
 
 using namespace cv;
 
@@ -58,14 +57,9 @@ void GlSumTbl::setParameters(Mat& img ,int subImg, int patch)
 		cin.get();
 	}
 
-	if(img.channels() != 1)
-	{
-		cvtColor(img, m_img, CV_RGB2GRAY);
-	}
-	else
-	{
-		m_img = img;
-	}
+
+	m_img = img;
+
 
 //create an zero Mat of size img.size - patch + 1
 	m_glSum = Mat::zeros(img.rows-patch+1,

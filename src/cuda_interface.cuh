@@ -5,24 +5,20 @@
 
 #include "opencv2\core\core.hpp"
 #include "opencv2\contrib\contrib.hpp"
-//#include "opencv2\imgproc\imgproc.hpp"
-//#include "opencv2\highgui\highgui.hpp"
+#include "opencv2\highgui\highgui.hpp"
+#include "opencv2\imgproc\imgproc.hpp"
 //*****cuda libraries *********
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include "cuda_kernel_functions.cuh"
 
-
 #include <ctime>
-#include <cuda_profiler_api.h>
-
 #include "outpputDataStructure.h"
 
 class CudaInterface{
 public:
 	CudaInterface();
-	~CudaInterface();// dopisaæ usuniêcie macierzy
-	//void setParameters(GlSumTbl& glimg1, GlSumTbl& glimg2);
+	~CudaInterface();
 	void setParameters(Mat&, Mat&);
 	void run();
 	void deviceInfo();

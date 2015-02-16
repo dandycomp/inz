@@ -20,26 +20,17 @@ class FastCC{
 public:
 	FastCC(){}
 	void setParameters(GlSumTbl&, GlSumTbl&);
-	void runFastCC();
 	void recursiveFastCC();
-	void recursiveFastCCStructure();
 public:
 	Mat m_corrMat;
 private:
 	void  create_F_and_G_mat();
-	float getCorrelate(Point, Point);
 	float getRecursiveCorrelate(Point, Point, float pVal);
-	OutpStr getRecursiveCorrelateWithOutputStructure(Point, Point, float pVal);
-
-	float getBestCorrFromArea(Point pnt);
-	float getRecursiveBestCorrFromArea(Point, Pmat pmat);
-	OutpStr getRecursiveBestCorrFromAreaWithOutputStructure(Point, Pmat pmat);
+	OutpStr bestCorrFromArea(Point, Pmat pmat);
 	int   getP(Point, Point);
 	float getQ(Point, Point);
 	float getF(Point pnt);
 	float getG(Point pnt);
-	float getDist(Point, Point);
-	void visualizeVector(vector <vector <OutpStr> >);
 
 private:
 	Mat m_Fmat;
@@ -51,7 +42,6 @@ private:
 	Pmat m_pVal;
 	Pmat m_nextXpVal;
 	Pmat m_nextYpVal;
-	vector<vector <OutpStr>> outpVec;
 };
 
 #endif // FAST_CC_HPP_INCLUDED
